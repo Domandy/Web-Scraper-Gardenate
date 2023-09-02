@@ -3,7 +3,10 @@ import { readFile, writeFile } from 'fs/promises';
 import { resolve } from 'path';
 import axios, { AxiosError } from "axios";
 import { JSDOM } from 'jsdom';
-
+/**
+ * @param url 
+ * @returns HTML data from a url
+ */
 function fetchPage(url:string): Promise<string | undefined> {
     const HTMLData = axios.get(url).then(res => res.data).catch((error: AxiosError) => {
         console.error(`There was an error with ${error}`);
@@ -13,6 +16,13 @@ function fetchPage(url:string): Promise<string | undefined> {
     return HTMLData;
 }
 
+/**
+ * Determines whether to get data from the cache or web.
+ * If from web it will save the html file to cache. 
+ * @param url 
+ * @param ignoreCache 
+ * @returns 
+ */
 async function fetchFromWebOrCache(url: string, ignoreCache = false) {
     
     // if no cache folder, create it.
@@ -50,9 +60,14 @@ async function fetchFromWebOrCache(url: string, ignoreCache = false) {
     }                                                                               
 }
 
-// extract main page details
+/**
+ * Extract all the data from the main page table and also the sub-pages
+ * @param document 
+ * @returns an array of objects  
+ */
 async function extractData(document: Document) {
   try {
+    //Main page details
     const baseURL = 'https://www.gardenate.com';
     const plantListDiv = document.querySelector('.plant-list');
     const table = plantListDiv?.querySelector('.table.table-striped.table-hover');
@@ -68,9 +83,8 @@ async function extractData(document: Document) {
           const url = new URL(urlPath, baseURL).toString();
           const instructions = columns[1]?.textContent || '';
 
-          // Fetch the page data for the url
+          // Fetch the secondary page data for the url
           const pageDocument = await fetchFromWebOrCache(url);
-          // Extract necessary information from the page
           const infoDiv = pageDocument.querySelector('.info');
           const sowingData = infoDiv?.querySelector('.sowing')?.textContent || '';
           const spacing = infoDiv?.querySelector('.spacing')?.textContent || '';
@@ -96,7 +110,11 @@ async function extractData(document: Document) {
   };
 }
 
-
+/**
+ * Saves data to files
+ * @param filename 
+ * @param data 
+ */
 function saveData(filename: string, data: any) {
   if (!existsSync(resolve(__dirname, 'data'))) {
     mkdirSync('data');
@@ -106,6 +124,9 @@ function saveData(filename: string, data: any) {
   });
 }
 
+/**
+ * Main function that determines url and months for data extraction
+ */
 export async function getData() {
   const months = 12;
   for (let i = 0; i < months; i++) {
@@ -118,7 +139,11 @@ export async function getData() {
   }
 }
 
-// Remove trailing tab characters from instructions
+/**
+ * Cleanup data to remove tabulation and spaces
+ * @param extractedData 
+ * @returns 
+ */
 function cleanedExtractedData(extractedData: extractData[]): extractData[]{  
     return extractedData.map(data => {
         return {
